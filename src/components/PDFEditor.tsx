@@ -1,14 +1,17 @@
 'use client';
 
+import ReactDOM from 'react-dom';
 import { useState, useRef, useEffect } from 'react';
 import { Document, Page } from 'react-pdf';
 import PDFControls from './PDFControls';
 import PDFToolbar, { EditMode } from './PDFToolbar';
-import PDFDrawingLayer from './PDFDrawingLayer';
+import PDFDrawingLayer, { PDFDrawingLayerRef } from './PDFDrawingLayer';
 import PDFTextLayer from './PDFTextLayer';
 import PDFViewLayer from './PDFViewLayer';
 import type { PDFFile } from '@/types/pdf';
 import type { PDFPageProxy } from 'pdfjs-dist';
+import { jsPDF } from 'jspdf';
+import PDFDownloader from './PDFDownloader';
 
 interface PDFEditorProps {
   file: PDFFile;
@@ -23,6 +26,9 @@ export default function PDFEditor({ file }: PDFEditorProps) {
   const [currentPage, setCurrentPage] = useState<PDFPageProxy | null>(null);
   const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+  // Add ref to store drawing canvas
+  const drawingLayerRef = useRef<PDFDrawingLayerRef>(null);
 
   useEffect(() => {
     if (file instanceof Blob) {
@@ -48,9 +54,15 @@ export default function PDFEditor({ file }: PDFEditorProps) {
     });
   }
 
-  const handleDownload = async () => {
-    // TODO: Implement download with edits
-    console.log('Download with edits');
+  // Function to register the drawing canvas
+  const registerDrawingLayer = (canvas: HTMLCanvasElement | null) => {
+    if (canvas) {
+      drawingLayerRef.current = {
+        getPageDrawing: () => canvas
+      };
+    } else {
+      drawingLayerRef.current = null;
+    }
   };
 
   const handleScaleChange = (newScale: number) => {
@@ -66,8 +78,16 @@ export default function PDFEditor({ file }: PDFEditorProps) {
           <PDFToolbar 
             mode={mode}
             onModeChange={setMode}
-            onDownload={handleDownload}
-          />
+          >
+            <PDFDownloader
+              drawingLayerRef={drawingLayerRef}
+              numPages={numPages || 0}
+              mode={mode}
+              pageDimensions={pageDimensions}
+              pages={mode === 'arrange' ? pages : undefined}
+              file={file}
+            />
+          </PDFToolbar>
         </div>
       </div>
 
@@ -130,33 +150,37 @@ export default function PDFEditor({ file }: PDFEditorProps) {
               onLoadSuccess={onDocumentLoadSuccess}
             >
               <div className="relative bg-white shadow-lg">
-                <Page 
-                  pageNumber={pageNumber} 
-                  scale={scale}
-                  onLoadSuccess={onPageLoadSuccess}
-                >
-                  <PDFDrawingLayer
-                    width={pageDimensions.width}
-                    height={pageDimensions.height}
+                <div id={`page-${pageNumber}`}>
+                  <Page 
+                    pageNumber={pageNumber} 
                     scale={scale}
-                    isActive={mode === 'draw'}
-                    onScaleChange={handleScaleChange}
-                  />
-                  <PDFViewLayer
-                    width={pageDimensions.width}
-                    height={pageDimensions.height}
-                    scale={scale}
-                    isActive={mode === 'view'}
-                    onScaleChange={handleScaleChange}
-                  />
-                </Page>
-                {currentPage && (
-                  <PDFTextLayer
-                    page={currentPage}
-                    scale={scale}
-                    isActive={mode === 'text'}
-                  />
-                )}
+                    onLoadSuccess={onPageLoadSuccess}
+                  >
+                    <PDFDrawingLayer
+                      width={pageDimensions.width}
+                      height={pageDimensions.height}
+                      scale={scale}
+                      isActive={mode === 'draw'}
+                      onScaleChange={handleScaleChange}
+                      onRegisterCanvas={registerDrawingLayer}
+                      pageNumber={pageNumber}
+                    />
+                    <PDFViewLayer
+                      width={pageDimensions.width}
+                      height={pageDimensions.height}
+                      scale={scale}
+                      isActive={mode === 'view'}
+                      onScaleChange={handleScaleChange}
+                    />
+                  </Page>
+                  {currentPage && (
+                    <PDFTextLayer
+                      page={currentPage}
+                      scale={scale}
+                      isActive={mode === 'text'}
+                    />
+                  )}
+                </div>
               </div>
             </Document>
           )}

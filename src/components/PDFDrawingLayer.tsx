@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+export interface PDFDrawingLayerRef {
+  getPageDrawing: (pageNumber: number) => HTMLCanvasElement;
+}
+
 interface PDFDrawingLayerProps {
   width: number;
   height: number;
   scale: number;
   isActive: boolean;
-  onScaleChange: (newScale: number) => void;
+  onScaleChange: (scale: number) => void;
+  onRegisterCanvas: (canvas: HTMLCanvasElement | null) => void;
+  pageNumber: number;
 }
 
 interface DrawingStroke {
@@ -16,17 +22,20 @@ interface DrawingStroke {
   lineWidth: number;
 }
 
-export default function PDFDrawingLayer({ width, height, scale, isActive, onScaleChange }: PDFDrawingLayerProps) {
+export default function PDFDrawingLayer({ width, height, scale, isActive, onScaleChange, onRegisterCanvas, pageNumber }: PDFDrawingLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
-  const [strokes, setStrokes] = useState<DrawingStroke[]>([]);
+  const [strokesByPage, setStrokesByPage] = useState<Record<number, DrawingStroke[]>>({});
   const currentStroke = useRef<DrawingStroke>({ points: [], color: '', lineWidth: 0 });
 
   const [redrawKey, setRedrawKey] = useState(0);
   const [redrawTrigger, setRedrawTrigger] = useState(0);
+
+  // Replace the strokes state with a computed value
+  const strokes = strokesByPage[pageNumber] || [];
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -49,12 +58,12 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     if (!ctx) return;
     
     ctx.clearRect(0, 0, width * scale, height * scale);
-
-    // Scale up the context for drawing existing strokes
     ctx.save();
     ctx.scale(scale, scale);
 
-    strokes.forEach(stroke => {
+    // Use the strokes for the current page
+    const currentPageStrokes = strokesByPage[pageNumber] || [];
+    currentPageStrokes.forEach(stroke => {
       if (stroke.points.length < 2) return;
       
       ctx.beginPath();
@@ -69,9 +78,8 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       ctx.stroke();
     });
 
-    // Restore the context for new drawings
     ctx.restore();
-  }, [scale, ctx, width, height, redrawTrigger]);
+  }, [scale, ctx, width, height, redrawTrigger, pageNumber, strokesByPage]);
 
   // Handle zoom with scroll wheel
   useEffect(() => {
@@ -79,31 +87,9 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       if (!isActive) return;
       
       e.preventDefault();
-      
-      // Get cursor position relative to canvas
-      const rect = canvasRef.current?.getBoundingClientRect();
-      const x = e.clientX - (rect?.left || 0);
-      const y = e.clientY - (rect?.top || 0);
-      
-      // Calculate scale change
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       const newScale = Math.max(0.1, Math.min(5, scale + delta));
-      
-      // Apply scale change
       onScaleChange(newScale);
-      
-      // Adjust scroll position to keep cursor point fixed
-      if (rect) {
-        const scrollContainer = canvasRef.current?.parentElement?.parentElement;
-        if (scrollContainer) {
-          const scaleFactor = newScale / scale;
-          const newX = x * scaleFactor;
-          const newY = y * scaleFactor;
-          
-          scrollContainer.scrollLeft += (newX - x);
-          scrollContainer.scrollTop += (newY - y);
-        }
-      }
     };
 
     const canvas = canvasRef.current;
@@ -125,7 +111,10 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       
       if (e.ctrlKey && e.key === 'z') {
         e.preventDefault();
-        setStrokes(prev => prev.slice(0, -1));
+        setStrokesByPage(prev => ({
+          ...prev,
+          [pageNumber]: (prev[pageNumber] || []).slice(0, -1)
+        }));
         setRedrawTrigger(prev => prev + 1);
       }
     };
@@ -137,7 +126,19 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isActive]);
+  }, [isActive, pageNumber]);
+
+  // Register the canvas with parent component
+  useEffect(() => {
+    if (onRegisterCanvas) {
+      onRegisterCanvas(canvasRef.current);
+    }
+    return () => {
+      if (onRegisterCanvas) {
+        onRegisterCanvas(null);
+      }
+    };
+  }, [onRegisterCanvas]);
 
   const startDrawing = (e: React.MouseEvent) => {
     if (!isActive || !ctx) return;
@@ -183,7 +184,10 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
 
   const stopDrawing = () => {
     if (isDrawing && currentStroke.current.points.length > 0) {
-      setStrokes(prev => [...prev, { ...currentStroke.current }]);
+      setStrokesByPage(prev => ({
+        ...prev,
+        [pageNumber]: [...(prev[pageNumber] || []), { ...currentStroke.current }]
+      }));
     }
     setIsDrawing(false);
   };
