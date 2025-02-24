@@ -19,6 +19,8 @@ npm run dev
   - downloading the PDF with changes. [X]
 - Edit:
   - Add edit & add text functionality. [... ]
+- Uploader:
+  - Allow multiple files to be uploaded at once Then auto merge them into one PDF. [... ]
 
 # GIFs
 
