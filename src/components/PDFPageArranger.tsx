@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Document, Page } from 'react-pdf';
 import Modal from 'react-modal';
 
@@ -13,7 +13,26 @@ interface PDFPageArrangerProps {
     setPages: (newPages: number[]) => void;
 }
 
+const useSuppressWarning = (warningMessage: string) => {
+    useEffect(() => {
+        const originalConsoleError = console.error;
+
+        console.error = (...args) => {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes(warningMessage)) {
+                return; // Ignore the specific warning
+            }
+            originalConsoleError(...args); // Call the original console.error for other errors
+        };
+
+        return () => {
+            console.error = originalConsoleError; // Restore original console.error on cleanup
+        };
+    }, [warningMessage]);
+};
+
 const PDFPageArranger: React.FC<PDFPageArrangerProps> = ({ pages, pdfUrl, setPages }) => {
+    useSuppressWarning('AbortException: TextLayer task cancelled');
+
     let isDragging = false;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [pageToDelete, setPageToDelete] = useState<number | null>(null);
@@ -64,30 +83,59 @@ const PDFPageArranger: React.FC<PDFPageArrangerProps> = ({ pages, pdfUrl, setPag
             <Modal
                 isOpen={isModalOpen}
                 onRequestClose={cancelDelete}
-                appElement={document.getElementById('pg-arrange') || undefined} // Ensure this matches your app element
+                appElement={document.getElementById('pg-arrange') || undefined}
                 style={{
+                    overlay: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark overlay
+                    },
                     content: {
-                        maxWidth: '300px', // Set a maximum width for the modal
-                        maxHeight: '160px', // Set a maximum height for the modal
-                        margin: 'auto', // Center the modal
-                        color: 'black', // Set font color to black
+                        maxWidth: '400px', // Increased max width
+                        maxHeight: '220px', // Increased max height
+                        margin: 'auto',
+                        borderRadius: '10px', // Rounded corners
+                        padding: '20px', // Added padding
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)', // Subtle shadow
+                        color: 'black',
                     },
                 }}
             >
-                <h2>Confirm Deletion</h2>
-                <p>Are you sure you want to delete page {pageToDelete}?</p>
-                <button 
-                    onClick={confirmDelete} 
-                    style={{ backgroundColor: '#28a745', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-                >
-                    Yes
-                </button>
-                <button 
-                    onClick={cancelDelete} 
-                    style={{ backgroundColor: '#dc3545', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-                >
-                    No
-                </button>
+                <h2 style={{ fontSize: '1.5em', marginBottom: '10px' }}>Confirm Deletion</h2>
+                <p style={{ marginBottom: '20px' }}>Are you sure you want to delete page {pageToDelete}?</p>
+                <p style={{ marginBottom: '20px' }}>This action cannot be undone.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <button 
+                        onClick={confirmDelete} 
+                        style={{ 
+                            backgroundColor: '#28a745', 
+                            color: 'white', 
+                            padding: '10px 15px', 
+                            border: 'none', 
+                            borderRadius: '5px', 
+                            cursor: 'pointer', 
+                            transition: 'background-color 0.3s ease',
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#218838'} // Darker green on hover
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#28a745'} // Original color
+                    >
+                        Yes
+                    </button>
+                    <button 
+                        onClick={cancelDelete} 
+                        style={{ 
+                            backgroundColor: '#dc3545', 
+                            color: 'white', 
+                            padding: '10px 15px', 
+                            border: 'none', 
+                            borderRadius: '5px', 
+                            cursor: 'pointer', 
+                            transition: 'background-color 0.3s ease',
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c82333'} // Darker red on hover
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc3545'} // Original color
+                    >
+                        No
+                    </button>
+                </div>
             </Modal>
             <div className="grid grid-cols-2 gap-4">
                 {pages.map((pageNum) => (

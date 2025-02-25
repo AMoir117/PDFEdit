@@ -107,6 +107,8 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isActive) return;
+
+      console.log(e.ctrlKey, e.key);
       
       if (e.ctrlKey && e.key === 'z') {
         e.preventDefault();

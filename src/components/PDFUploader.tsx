@@ -56,18 +56,26 @@ export default function PDFUploader({ onFileUpload }: PDFUploaderProps) {
   });
 
   return (
-    <div 
-      {...getRootProps()} 
-      className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-gray-400"
-    >
-      <input {...getInputProps()} />
-      {isMerging ? (
-        <p>Merging files, please wait...</p>
-      ) : isDragActive ? (
-        <p>Drop the PDF files here...</p>
-      ) : (
-        <p>Drag and drop PDF files here, or click to select them</p>
-      )}
+    <div className="flex flex-col ">
+      <div 
+        {...getRootProps()} 
+        className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-gray-400 flex-grow"
+      >
+        <input {...getInputProps()} />
+        {isMerging ? (
+          <p>Merging files, please wait...</p>
+        ) : isDragActive ? (
+          <p>Drop the PDF files here...</p>
+        ) : (
+          <p>Drag and drop PDF files here, or click to select them</p>
+        )}
+        <p className="mt-4 text-gray-600 text-sm">Merge, Draw/Sign, Re-Arrange & Delete PDF Pages</p>
+      </div>
+      <footer className="mt-4 text-center text-gray-500 text-xs">
+        <p>
+          Site made by <a href="https://www.linkedin.com/in/andrew-g-moir/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Andrew M</a>
+        </p>
+      </footer>
     </div>
   );
 }

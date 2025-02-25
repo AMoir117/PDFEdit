@@ -109,9 +109,9 @@ export default function PDFEditor({ file }: PDFEditorProps) {
           onScaleChange={handleScaleChange}
         />
       ) : (
-        <div className="mb-4 p-2 border bg-white text-center text-sm text-black">
-            <p className="font-sans">Drag to rearrange pages in PDF</p>
-            <p className="font-sans">Click to delete a page</p>
+        <div className="mb-4 p-4 border bg-white text-center text-sm text-black shadow-md">
+            <p className="font-sans text-lg font-semibold mb-2">Drag to rearrange pages in PDF</p>
+            <p className="font-sans text-lg">Click to delete a page</p>
         </div>
       )}
 
