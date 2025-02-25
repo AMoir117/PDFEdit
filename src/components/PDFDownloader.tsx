@@ -19,12 +19,30 @@ export default function PDFDownloader({ drawingLayerRef, numPages, mode, pageDim
     try {
       if (!file) throw new Error('No file provided');
 
+      // Debugging: Log the file type and content
+      console.log('File:', file);
+      console.log('File Type:', file instanceof File ? 'File' : typeof file);
+
+      // Check if the file is a valid PDF
+      if (file instanceof Blob) {
+        // Check if the Blob is a PDF
+        const blobType = file.type;
+        if (blobType !== 'application/pdf') {
+          throw new Error('Invalid file format: Not a PDF');
+        }
+      } else if (!(file instanceof File) && !('url' in file) && !('data' in file)) {
+        throw new Error('Invalid file format');
+      }
+
       // Load the original PDF
       const existingPdfBytes = await (async () => {
         if (file instanceof File) {
           return new Uint8Array(await file.arrayBuffer());
+        } else if (file instanceof Blob) {
+          return new Uint8Array(await file.arrayBuffer()); // Handle Blob directly
         } else if ('url' in file) {
           const response = await fetch(file.url);
+          if (!response.ok) throw new Error('Failed to fetch PDF from URL');
           return new Uint8Array(await response.arrayBuffer());
         } else if ('data' in file) {
           return new Uint8Array(file.data.buffer);

@@ -12,6 +12,7 @@ import type { PDFFile } from '@/types/pdf';
 import type { PDFPageProxy } from 'pdfjs-dist';
 import { jsPDF } from 'jspdf';
 import PDFDownloader from './PDFDownloader';
+import PDFPageArranger from './PDFPageArranger';
 
 interface PDFEditorProps {
   file: PDFFile;
@@ -90,14 +91,21 @@ export default function PDFEditor({ file }: PDFEditorProps) {
           </PDFToolbar>
         </div>
       </div>
-
-      <PDFControls 
-        pageNumber={pageNumber}
-        numPages={numPages}
-        onPageChange={setPageNumber}
-        scale={scale}
-        onScaleChange={handleScaleChange}
-      />
+      
+      {mode !== 'arrange' ? (
+        <PDFControls 
+          pageNumber={pageNumber}
+          numPages={numPages}
+          onPageChange={setPageNumber}
+          scale={scale}
+          onScaleChange={handleScaleChange}
+        />
+      ) : (
+        <div className="mb-4 p-2 border bg-white text-center text-sm text-black">
+            <p className="font-sans">Drag to rearrange pages in PDF</p>
+            <p className="font-sans">Click to delete a page</p>
+        </div>
+      )}
 
       <div className="flex-1 w-full overflow-auto">
         <div 
@@ -108,42 +116,11 @@ export default function PDFEditor({ file }: PDFEditorProps) {
           }}
         >
           {mode === 'arrange' ? (
-            <div className="grid grid-cols-2 gap-4 p-4">
-              {pages.map((pageNum) => (
-                <div 
-                  key={pageNum}
-                  className="border rounded cursor-move bg-white shadow-md"
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', pageNum.toString());
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const from = parseInt(e.dataTransfer.getData('text/plain'));
-                    const to = pageNum;
-                    if (from !== to) {
-                      const newPages = [...pages];
-                      const fromIndex = newPages.indexOf(from);
-                      const toIndex = newPages.indexOf(to);
-                      newPages.splice(fromIndex, 1);
-                      newPages.splice(toIndex, 0, from);
-                      setPages(newPages);
-                    }
-                  }}
-                >
-                  <Document file={pdfUrl}>
-                    <Page 
-                      pageNumber={pageNum} 
-                      scale={0.5}
-                      className="pointer-events-none"
-                    />
-                  </Document>
-                </div>
-              ))}
-            </div>
+            <PDFPageArranger 
+              pages={pages} 
+              pdfUrl={pdfUrl} 
+              setPages={setPages} 
+            />
           ) : (
             <Document
               file={pdfUrl}
