@@ -35,13 +35,13 @@ export default function PDFToolbar({ mode, onModeChange, children }: PDFToolbarP
             mode === 'draw' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
           }`}
         >
-          Draw&nbsp;    
-          <span className="relative inline-block">
+          Draw    
+          {/* <span className="relative inline-block">
             <span className="text-orange-600 cursor-pointer">(!)</span>
             <span className="absolute left-1/2 transform -translate-x-1/2 -translate-y-8 bg-orange-200 text-orange-800 text-xs p-1 rounded opacity-0 hover:opacity-100 transition-opacity duration-200">
               Feature currently only works for 1 page PDFs.
             </span>
-          </span>
+          </span> */}
         </button>
         <button
           onClick={() => onModeChange('arrange')}

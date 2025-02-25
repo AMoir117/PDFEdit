@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { PDFPageProxy } from 'pdfjs-dist';
 
 interface PDFTextLayerProps {
   page: PDFPageProxy;
   scale: number;
   isActive: boolean;
+  textAnnotations: { id: string; content: string; x: number; y: number }[];
+  onTextChange: (id: string, newText: string) => void;
 }
 
 interface TextEdit {
@@ -16,68 +18,29 @@ interface TextEdit {
   text: string;
 }
 
-export default function PDFTextLayer({ page, scale, isActive }: PDFTextLayerProps) {
-  const [textEdits, setTextEdits] = useState<TextEdit[]>([]);
-  const [selectedEdit, setSelectedEdit] = useState<string | null>(null);
+export default function PDFTextLayer({ page, scale, isActive, textAnnotations, onTextChange }: PDFTextLayerProps) {
+  const textRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (!isActive) return;
-
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-
-    const newEdit: TextEdit = {
-      id: Date.now().toString(),
-      x,
-      y,
-      text: 'New Text'
-    };
-
-    setTextEdits([...textEdits, newEdit]);
-    setSelectedEdit(newEdit.id);
+  const handleTextChange = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    onTextChange(id, e.target.value);
   };
 
   return (
-    <div 
-      className="absolute top-0 left-0 w-full h-full"
-      onClick={handleClick}
-    >
-      {textEdits.map((edit) => (
+    <div className="text-layer">
+      {textAnnotations.map(({ id, content, x, y }) => (
         <div
-          key={edit.id}
-          className="absolute"
-          style={{
-            left: `${edit.x * scale}px`,
-            top: `${edit.y * scale}px`,
-          }}
+          key={id}
+          ref={el => { textRefs.current[id] = el; }}
+          style={{ position: 'absolute', left: x, top: y }}
         >
-          {selectedEdit === edit.id ? (
-            <input
-              type="text"
-              value={edit.text}
-              onChange={(e) => {
-                setTextEdits(textEdits.map(t => 
-                  t.id === edit.id ? { ...t, text: e.target.value } : t
-                ));
-              }}
-              onBlur={() => setSelectedEdit(null)}
-              autoFocus
-              className="border rounded px-1"
-            />
-          ) : (
-            <div 
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedEdit(edit.id);
-              }}
-              className="cursor-text"
-            >
-              {edit.text}
-            </div>
-          )}
+          <input
+            type="text"
+            value={content}
+            onChange={e => handleTextChange(id, e)}
+            style={{ width: '100px' }}
+          />
         </div>
       ))}
     </div>
   );
-} 
+}

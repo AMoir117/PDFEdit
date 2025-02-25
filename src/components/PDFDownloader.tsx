@@ -12,9 +12,10 @@ interface PDFDownloaderProps {
   pageDimensions: { width: number; height: number };
   pages?: number[];
   file: PDFFile;
+  drawings: string[];
 }
 
-export default function PDFDownloader({ drawingLayerRef, numPages, mode, pageDimensions, pages, file }: PDFDownloaderProps) {
+export default function PDFDownloader({ drawingLayerRef, numPages, mode, pageDimensions, pages, file, drawings }: PDFDownloaderProps) {
   const handleDownload = async () => {
     try {
       if (!file) throw new Error('No file provided');
@@ -61,24 +62,19 @@ export default function PDFDownloader({ drawingLayerRef, numPages, mode, pageDim
         const [copiedPage] = await newPdfDoc.copyPages(pdfDoc, [index]); // Copy the page from the original document
         newPdfDoc.addPage(copiedPage); // Add the copied page to the new document
 
-        if (mode === 'draw' && drawingLayerRef.current) {
-          // Get the drawing for the current page
-          const drawingCanvas = drawingLayerRef.current.getPageDrawing(pageNum);
-          const drawingBytes = await new Promise<Uint8Array>(resolve => {
-            drawingCanvas.toBlob(async blob => {
-              const arrayBuffer = await blob!.arrayBuffer();
-              resolve(new Uint8Array(arrayBuffer));
-            }, 'image/png');
-          });
-
-          const drawingImage = await newPdfDoc.embedPng(drawingBytes);
-          const page = newPdfDoc.getPage(newPdfDoc.getPageCount() - 1); // Get the last added page
-          page.drawImage(drawingImage, {
-            x: 0,
-            y: 0,
-            width: page.getWidth(),
-            height: page.getHeight(),
-          });
+        if (mode === 'draw') {
+          // Get the drawing for the current page from the drawings array
+          const drawingDataUrl = drawings[pageNum - 1]; // Access the drawing for the specific page
+          if (drawingDataUrl) {
+            const drawingImage = await newPdfDoc.embedPng(await fetch(drawingDataUrl).then(res => res.arrayBuffer()));
+            const page = newPdfDoc.getPage(newPdfDoc.getPageCount() - 1); // Get the last added page
+            page.drawImage(drawingImage, {
+              x: 0,
+              y: 0,
+              width: page.getWidth(),
+              height: page.getHeight(),
+            });
+          }
         }
       }
 

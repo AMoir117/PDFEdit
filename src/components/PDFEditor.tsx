@@ -27,6 +27,8 @@ export default function PDFEditor({ file }: PDFEditorProps) {
   const [currentPage, setCurrentPage] = useState<PDFPageProxy | null>(null);
   const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [drawings, setDrawings] = useState<string[]>([]);
+  const [textAnnotations, setTextAnnotations] = useState<{ id: string; content: string; x: number; y: number }[]>([]);
 
   // Add ref to store drawing canvas
   const drawingLayerRef = useRef<PDFDrawingLayerRef>(null);
@@ -70,6 +72,11 @@ export default function PDFEditor({ file }: PDFEditorProps) {
     setScale(Math.max(0.1, Math.min(5, newScale)));
   };
 
+  // Function to handle drawings change
+  const handleDrawingsChange = (newDrawings: string[]) => {
+    setDrawings(newDrawings);
+  };
+
   if (!pdfUrl) return null;
 
   return (
@@ -87,6 +94,7 @@ export default function PDFEditor({ file }: PDFEditorProps) {
               pageDimensions={pageDimensions}
               pages={mode === 'arrange' ? pages : undefined}
               file={file}
+              drawings={drawings}
             />
           </PDFToolbar>
         </div>
@@ -141,6 +149,7 @@ export default function PDFEditor({ file }: PDFEditorProps) {
                       onScaleChange={handleScaleChange}
                       onRegisterCanvas={registerDrawingLayer}
                       pageNumber={pageNumber}
+                      onDrawingsChange={handleDrawingsChange}
                     />
                     <PDFViewLayer
                       width={pageDimensions.width}
@@ -150,13 +159,6 @@ export default function PDFEditor({ file }: PDFEditorProps) {
                       onScaleChange={handleScaleChange}
                     />
                   </Page>
-                  {currentPage && (
-                    <PDFTextLayer
-                      page={currentPage}
-                      scale={scale}
-                      isActive={mode === 'text'}
-                    />
-                  )}
                 </div>
               </div>
             </Document>

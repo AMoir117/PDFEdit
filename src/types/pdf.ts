@@ -5,3 +5,9 @@ export interface PDFPage {
     rotation: number;
 }
 
+export interface DrawingStroke {
+  points: { x: number; y: number }[]; // Array of points defining the stroke
+  color: string; // Color of the stroke
+  lineWidth: number; // Width of the stroke
+}
+

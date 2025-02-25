@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { DrawingStroke } from '@/types/pdf';
 
 export interface PDFDrawingLayerRef {
   getPageDrawing: (pageNumber: number) => HTMLCanvasElement;
@@ -14,15 +15,11 @@ interface PDFDrawingLayerProps {
   onScaleChange: (scale: number) => void;
   onRegisterCanvas: (canvas: HTMLCanvasElement | null) => void;
   pageNumber: number;
+  onDrawingsChange: (drawings: string[]) => void;
 }
 
-interface DrawingStroke {
-  points: { x: number; y: number }[];
-  color: string;
-  lineWidth: number;
-}
 
-export default function PDFDrawingLayer({ width, height, scale, isActive, onScaleChange, onRegisterCanvas, pageNumber }: PDFDrawingLayerProps) {
+export default function PDFDrawingLayer({ width, height, scale, isActive, onScaleChange, onRegisterCanvas, pageNumber, onDrawingsChange }: PDFDrawingLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
@@ -33,6 +30,8 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
 
   const [redrawKey, setRedrawKey] = useState(0);
   const [redrawTrigger, setRedrawTrigger] = useState(0);
+
+  const [drawings, setDrawings] = useState<string[]>([]); // Array to hold PNG data URLs for each page
 
   // Replace the strokes state with a computed value
   const strokes = strokesByPage[pageNumber] || [];
@@ -182,15 +181,38 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     ctx.restore();
   };
 
-  const stopDrawing = () => {
-    if (isDrawing && currentStroke.current.points.length > 0) {
+  // Function to register strokes for the current page
+  const registerStroke = () => {
+    if (currentStroke.current.points.length > 0) {
       setStrokesByPage(prev => ({
         ...prev,
         [pageNumber]: [...(prev[pageNumber] || []), { ...currentStroke.current }]
       }));
     }
+  };
+
+  const saveDrawingAsPng = async () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const dataUrl = canvas.toDataURL('image/png');
+      setDrawings(prev => {
+        const newDrawings = [...prev];
+        newDrawings[pageNumber - 1] = dataUrl; // Store the drawing for the current page
+        return newDrawings;
+      });
+    }
+  };
+
+  // Call saveDrawingAsPng in stopDrawing
+  const stopDrawing = () => {
+    registerStroke();
+    saveDrawingAsPng(); // Save the drawing when stopping
     setIsDrawing(false);
   };
+
+  useEffect(() => {
+    onDrawingsChange(drawings);
+  }, [drawings]);
 
   return (
     <div className="absolute top-0 left-0 z-10">
@@ -222,7 +244,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
+        // onMouseLeave={stopDrawing}
       />
     </div>
   );
