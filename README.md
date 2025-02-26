@@ -34,5 +34,4 @@ npm run dev
 
 # GIFs
 
-![Draw](./media/pdfedit-d1.gif)
-![ReArrange](./media/pdfedit-d1.5.gif)
+![Example Usage](./media/pdfedit-d2.gif)
