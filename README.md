@@ -1,12 +1,15 @@
 # PDF-Edit
 
 # How to run
+clone the repo
+npm install
 npm run dev
 
 # Key
 [X] - Done
 [] - To Do
 [... ] - In Progress
+
 # TODO
 - Drawing:
   - Save drawing canvas state when switching to another Page. [X]
@@ -24,13 +27,7 @@ npm run dev
   - Allow multiple files to be uploaded at once Then auto merge them into one PDF. [X]
 
 - Other:
-  - supress warnings on all components not just the arranger. [... ]
-
-- Deployment:
-    - get a url, im thinking pdf.edit.
-    - remove those js pdf vulnerabilities.
-    - add footer with a watermark.
-    - use vercel, prob easiest to deploy on.
+  - supress pdf lib warnings on all components not just the arranger. [... ]
 
 # GIFs
 
