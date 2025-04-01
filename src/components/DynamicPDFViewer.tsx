@@ -15,8 +15,8 @@ export default function DynamicPDFViewer({ file }: DynamicPDFViewerProps) {
   useEffect(() => {
     // Only run in the browser
     if (typeof window !== 'undefined') {
-      // Set worker source using the specific CDN link
-      pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.269/build/pdf.worker.min.mjs';
+      // Set worker source using the correct version that matches your PDF.js library (4.8.69)
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
       
       // Debug version info
       console.log('PDF.js version:', pdfjs.version);
