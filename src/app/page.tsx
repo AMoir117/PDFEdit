@@ -1,5 +1,6 @@
 'use client';
 
+import "../utils/polyfills";
 import { useState } from 'react';
 import { pdfjs } from 'react-pdf';
 import Navbar from '@/components/Navbar';

@@ -1,3 +1,4 @@
+import "../utils/polyfills";
 import "./globals.css";
 
 
