@@ -110,18 +110,7 @@ export default function PDFTextLayer({ width, height, scale, isActive, pageNumbe
     }
   };
 
-  const handleTextBoxDoubleClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedTextBox(id);
-    setEditMode(prev => ({ ...prev, [id]: true }));
-    
-    // Focus the textarea after a short delay
-    setTimeout(() => {
-      if (textAreaRefs.current[id]) {
-        textAreaRefs.current[id]?.focus();
-      }
-    }, 50);
-  };
+  
 
   const handleMouseDown = (id: string, e: React.MouseEvent) => {
     if (!isActive || !editMode[id]) return;
@@ -146,18 +135,8 @@ export default function PDFTextLayer({ width, height, scale, isActive, pageNumbe
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !selectedTextBox) return;
-    
-    const x = (e.clientX / scale) - dragOffset.x;
-    const y = (e.clientY / scale) - dragOffset.y;
-    
-    updateTextBox(selectedTextBox, { x, y });
-  };
+  
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
 
   const handleDeleteTextBox = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -228,7 +207,7 @@ export default function PDFTextLayer({ width, height, scale, isActive, pageNumbe
   };
 
   // Global mouse event handlers to ensure drag operations work properly
-  const handleGlobalMouseDown = (e: MouseEvent) => {
+  const handleGlobalMouseDown = () => {
     // Logic is handled by component-specific handlers
   };
   
@@ -329,7 +308,7 @@ export default function PDFTextLayer({ width, height, scale, isActive, pageNumbe
             {selectedTextBox ? (
               <p>Double-click to edit text boxes. Click on the green check mark to save your changes.</p>
             ) : (
-              <p>Click the "Add Text Box" button to create a new text box. Double-click any existing text box to edit it.</p>
+              <p>Click the &quot;Add Text Box&quot; button to create a new text box. Double-click any existing text box to edit it.</p>
             )}
           </div>
           

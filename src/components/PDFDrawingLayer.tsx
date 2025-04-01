@@ -30,7 +30,6 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   const [strokesByPage, setStrokesByPage] = useState<Record<number, DrawingStroke[]>>({});
   const currentStroke = useRef<DrawingStroke>({ points: [], color: '', lineWidth: 0, opacity: 1.0 });
 
-  const [redrawKey, setRedrawKey] = useState(0);
   const [redrawTrigger, setRedrawTrigger] = useState(0);
 
   // Store previous pageNumber to detect page changes
@@ -40,7 +39,6 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   const [localDrawings, setLocalDrawings] = useState<string[]>(initialDrawings);
 
   // Replace the strokes state with a computed value
-  const strokes = strokesByPage[pageNumber] || [];
 
   // Initialize localDrawings from initialDrawings when component mounts or when initialDrawings changes
   useEffect(() => {

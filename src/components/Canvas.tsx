@@ -9,7 +9,7 @@ interface CanvasProps {
   rotation: number;
 }
 
-export default function Canvas({ pageNumber, scale, rotation }: CanvasProps) {
+export default function Canvas({ }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
 

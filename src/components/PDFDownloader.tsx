@@ -1,6 +1,5 @@
 'use client';
 
-import { jsPDF } from 'jspdf';
 import { PDFDocument, rgb } from 'pdf-lib';
 import type { PDFDrawingLayerRef } from './PDFDrawingLayer';
 import type { PDFFile, TextBox } from '@/types/pdf';
@@ -16,7 +15,7 @@ interface PDFDownloaderProps {
   textBoxes: TextBox[];
 }
 
-export default function PDFDownloader({ drawingLayerRef, numPages, mode, pageDimensions, pages, file, drawings, textBoxes }: PDFDownloaderProps) {
+export default function PDFDownloader({  numPages,  pages, file, drawings, textBoxes }: PDFDownloaderProps) {
   const handleDownload = async () => {
     try {
       if (!file) throw new Error('No file provided');
@@ -81,7 +80,6 @@ export default function PDFDownloader({ drawingLayerRef, numPages, mode, pageDim
         const pageTextBoxes = textBoxes.filter(tb => tb.pageNumber === pageNum);
         if (pageTextBoxes.length > 0) {
           // Use Helvetica as the fallback font
-          const helveticaFont = await newPdfDoc.embedFont('Helvetica');
           
           for (const textBox of pageTextBoxes) {
             // Use Standard fonts that PDF supports

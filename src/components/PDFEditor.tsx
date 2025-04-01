@@ -1,6 +1,5 @@
 'use client';
 
-import ReactDOM from 'react-dom';
 import { useState, useRef, useEffect } from 'react';
 import { Document, Page } from 'react-pdf';
 import PDFControls from './PDFControls';
@@ -10,7 +9,6 @@ import PDFTextLayer from './PDFTextLayer';
 import PDFViewLayer from './PDFViewLayer';
 import type { PDFFile, TextBox } from '@/types/pdf';
 import type { PDFPageProxy } from 'pdfjs-dist';
-import { jsPDF } from 'jspdf';
 import PDFDownloader from './PDFDownloader';
 import PDFPageArranger from './PDFPageArranger';
 
@@ -24,7 +22,6 @@ export default function PDFEditor({ file }: PDFEditorProps) {
   const [scale, setScale] = useState(1);
   const [mode, setMode] = useState<EditMode>('view');
   const [pages, setPages] = useState<number[]>([]);
-  const [currentPage, setCurrentPage] = useState<PDFPageProxy | null>(null);
   const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [drawings, setDrawings] = useState<string[]>([]);
@@ -50,7 +47,6 @@ export default function PDFEditor({ file }: PDFEditorProps) {
   }
 
   function onPageLoadSuccess(page: PDFPageProxy) {
-    setCurrentPage(page);
     const viewport = page.getViewport({ scale: 1 });
     setPageDimensions({
       width: viewport.width,
