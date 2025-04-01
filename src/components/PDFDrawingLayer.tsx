@@ -34,14 +34,24 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
 
   // Store previous pageNumber to detect page changes
   const prevPageNumberRef = useRef<number>(pageNumber);
+  
+  // Debounce timer ref
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Modified: Initialize with parent's drawings if available
   const [localDrawings, setLocalDrawings] = useState<string[]>(initialDrawings);
-
-  // Replace the strokes state with a computed value
+  
+  // Add a ref to track if we're syncing from internal state changes
+  const isInternalUpdate = useRef(false);
 
   // Initialize localDrawings from initialDrawings when component mounts or when initialDrawings changes
   useEffect(() => {
+    // Skip if this is an internal update
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+    
     if (initialDrawings.length > 0) {
       // Only update if the content actually changed to prevent loops
       const isDifferent = initialDrawings.some((drawing, index) => {
@@ -52,7 +62,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
         setLocalDrawings(initialDrawings);
       }
     }
-  }, [initialDrawings]);
+  }, [initialDrawings]); // Remove localDrawings from dependency to prevent circular updates
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,6 +80,33 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     }
   }, [width, height, scale]);
 
+  // Modified: Save drawings for a specific page
+  const saveDrawingAsPng = async (pageNum = pageNumber) => {
+    // Clear any pending save
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    
+    // Debounce the save operation
+    saveTimerRef.current = setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const dataUrl = canvas.toDataURL('image/png');
+        isInternalUpdate.current = true; // Mark this as an internal update
+        setLocalDrawings(prev => {
+          const newDrawings = [...prev];
+          // Ensure the array has enough elements
+          while (newDrawings.length < pageNum) {
+            newDrawings.push('');
+          }
+          newDrawings[pageNum - 1] = dataUrl; // Store the drawing for the current page
+          return newDrawings;
+        });
+      }
+      saveTimerRef.current = null;
+    }, 100); // 100ms debounce
+  };
+
   // NEW EFFECT: Sync local drawings with parent component's drawings
   // Only sync when local drawings have actually changed to avoid loops
   useEffect(() => {
@@ -80,11 +117,11 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
         return drawing !== initialDrawings[index];
       });
       
-      if (isDifferent) {
+      if (isDifferent && !isInternalUpdate.current) {
         onDrawingsChange(localDrawings);
       }
     }
-  }, [localDrawings]);  // Removed onDrawingsChange dependency to break the cycle
+  }, [localDrawings, initialDrawings, onDrawingsChange]);
 
   // Modified: Save current drawing before changing page
   useEffect(() => {
@@ -98,11 +135,14 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       // Update the reference
       prevPageNumberRef.current = pageNumber;
     }
-  }, [pageNumber, ctx, width, height, scale]);
+  }, [pageNumber, ctx, width, height, scale, saveDrawingAsPng]);
 
   // New effect: Restore drawing when page is loaded or changed
   useEffect(() => {
     if (!ctx) return;
+    
+    // Prevent unnecessary redraws when we're actively drawing
+    if (isDrawing) return;
     
     // Check if we have a drawing for this page
     if (localDrawings[pageNumber - 1]) {
@@ -116,11 +156,11 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       // Clear the canvas if no drawing exists
       ctx.clearRect(0, 0, width * scale, height * scale);
     }
-  }, [pageNumber, ctx, localDrawings, width, height, scale]);
+  }, [pageNumber, ctx, localDrawings, width, height, scale, isDrawing]);
 
   // Redraw all strokes when scale changes or when triggered
   useEffect(() => {
-    if (!ctx) return;
+    if (!ctx || isDrawing) return; // Skip redrawing while actively drawing
     
     // We now handle the drawing rendering in the restore effect above
     // This is just for redrawing strokes
@@ -147,7 +187,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     });
 
     ctx.restore();
-  }, [scale, ctx, width, height, redrawTrigger, pageNumber, strokesByPage, lineWidth]);
+  }, [scale, ctx, width, height, redrawTrigger, pageNumber, strokesByPage, lineWidth, isDrawing]);
 
   // Handle zoom with scroll wheel
   useEffect(() => {
@@ -263,23 +303,6 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     }
   };
 
-  // Modified: Save drawings for a specific page
-  const saveDrawingAsPng = async (pageNum = pageNumber) => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL('image/png');
-      setLocalDrawings(prev => {
-        const newDrawings = [...prev];
-        // Ensure the array has enough elements
-        while (newDrawings.length < pageNum) {
-          newDrawings.push('');
-        }
-        newDrawings[pageNum - 1] = dataUrl; // Store the drawing for the current page
-        return newDrawings;
-      });
-    }
-  };
-
   // Now add global mouse event handlers after function declarations
   useEffect(() => {
     if (!isActive || !ctx) return;
@@ -333,7 +356,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [isActive, isDrawing, ctx, scale, width, height, color, lineWidth, registerStroke, saveDrawingAsPng]);
+  }, [isActive, isDrawing, ctx, scale, width, height, color, lineWidth, opacity, registerStroke, saveDrawingAsPng]);
 
   return (
     <div className="absolute top-0 left-0 z-40" 
