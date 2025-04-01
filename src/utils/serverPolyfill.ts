@@ -1,5 +1,8 @@
-// Polyfill for Promise.withResolvers
-if (typeof Promise.withResolvers !== 'function') {
+// Server-specific polyfill for Promise.withResolvers
+// This is needed for Next.js server-side rendering
+
+// Only apply in server environment
+if (typeof window === 'undefined' && typeof Promise.withResolvers !== 'function') {
   Promise.withResolvers = function<T>() {
     let resolve!: (value: T | PromiseLike<T>) => void;
     let reject!: (reason?: unknown) => void;
