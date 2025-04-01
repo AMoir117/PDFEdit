@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DrawingStroke } from '@/types/pdf';
+import { setupCanvasContext, drawStroke, getMousePosition, isWithinCanvas } from '@/utils/canvas';
+import { saveDrawingAsPng, redrawStrokes } from '@/utils/pdf';
 
 export interface PDFDrawingLayerRef {
   getPageDrawing: (pageNumber: number) => HTMLCanvasElement;
@@ -19,7 +21,6 @@ interface PDFDrawingLayerProps {
   initialDrawings?: string[];
 }
 
-
 export default function PDFDrawingLayer({ width, height, scale, isActive, onScaleChange, onRegisterCanvas, pageNumber, onDrawingsChange, initialDrawings = [] }: PDFDrawingLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -29,21 +30,59 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   const [opacity, setOpacity] = useState(1.0);
   const [strokesByPage, setStrokesByPage] = useState<Record<number, DrawingStroke[]>>({});
   const currentStroke = useRef<DrawingStroke>({ points: [], color: '', lineWidth: 0, opacity: 1.0 });
-
   const [redrawTrigger, setRedrawTrigger] = useState(0);
-
-  // Store previous pageNumber to detect page changes
   const prevPageNumberRef = useRef<number>(pageNumber);
-
-  // Modified: Initialize with parent's drawings if available
   const [localDrawings, setLocalDrawings] = useState<string[]>(initialDrawings);
 
-  // Replace the strokes state with a computed value
+  const registerStroke = () => {
+    if (currentStroke.current.points.length > 0) {
+      setStrokesByPage(prev => ({
+        ...prev,
+        [pageNumber]: [...(prev[pageNumber] || []), { ...currentStroke.current }]
+      }));
+    }
+  };
 
-  // Initialize localDrawings from initialDrawings when component mounts or when initialDrawings changes
+  // Handle undo with Ctrl+Z
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isActive) return;
+      
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        
+        setStrokesByPage(prev => {
+          const currentStrokes = prev[pageNumber] || [];
+          if (currentStrokes.length === 0) return prev;
+          
+          const newStrokes = {
+            ...prev,
+            [pageNumber]: currentStrokes.slice(0, -1)
+          };
+          
+          if (ctx && canvasRef.current) {
+            ctx.clearRect(0, 0, width * scale, height * scale);
+            redrawStrokes(ctx, newStrokes[pageNumber] || [], scale, lineWidth);
+            saveDrawingAsPng(canvasRef.current, pageNumber, localDrawings, setLocalDrawings);
+          }
+          
+          return newStrokes;
+        });
+      }
+    };
+
+    if (isActive) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isActive, pageNumber, ctx, width, height, scale, lineWidth, localDrawings]);
+
+  // Initialize localDrawings from initialDrawings
   useEffect(() => {
     if (initialDrawings.length > 0) {
-      // Only update if the content actually changed to prevent loops
       const isDifferent = initialDrawings.some((drawing, index) => {
         return drawing !== localDrawings[index];
       });
@@ -54,28 +93,20 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     }
   }, [initialDrawings]);
 
+  // Setup canvas context
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Scale canvas to match PDF size
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    
-    const context = canvas.getContext('2d');
+    const context = setupCanvasContext(canvas, scale, width, height);
     if (context) {
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
       setCtx(context);
     }
   }, [width, height, scale]);
 
-  // NEW EFFECT: Sync local drawings with parent component's drawings
-  // Only sync when local drawings have actually changed to avoid loops
+  // Sync local drawings with parent
   useEffect(() => {
-    // Don't call this on every render or when initializing with parent's drawings
     if (onDrawingsChange && localDrawings.length > 0) {
-      // Avoid running this effect due to parent updates coming back to child
       const isDifferent = !initialDrawings.length || localDrawings.some((drawing, index) => {
         return drawing !== initialDrawings[index];
       });
@@ -84,27 +115,21 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
         onDrawingsChange(localDrawings);
       }
     }
-  }, [localDrawings]);  // Removed onDrawingsChange dependency to break the cycle
+  }, [localDrawings]);
 
-  // Modified: Save current drawing before changing page
+  // Save current drawing before changing page
   useEffect(() => {
     if (prevPageNumberRef.current !== pageNumber && ctx && canvasRef.current) {
-      // Save drawing from the previous page
-      saveDrawingAsPng(prevPageNumberRef.current);
-      
-      // Clear the canvas for the new page
+      saveDrawingAsPng(canvasRef.current, prevPageNumberRef.current, localDrawings, setLocalDrawings);
       ctx.clearRect(0, 0, width * scale, height * scale);
-      
-      // Update the reference
       prevPageNumberRef.current = pageNumber;
     }
   }, [pageNumber, ctx, width, height, scale]);
 
-  // New effect: Restore drawing when page is loaded or changed
+  // Restore drawing when page changes
   useEffect(() => {
     if (!ctx) return;
     
-    // Check if we have a drawing for this page
     if (localDrawings[pageNumber - 1]) {
       const img = new Image();
       img.onload = () => {
@@ -113,40 +138,14 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       };
       img.src = localDrawings[pageNumber - 1];
     } else {
-      // Clear the canvas if no drawing exists
       ctx.clearRect(0, 0, width * scale, height * scale);
     }
   }, [pageNumber, ctx, localDrawings, width, height, scale]);
 
-  // Redraw all strokes when scale changes or when triggered
+  // Redraw strokes on scale change
   useEffect(() => {
     if (!ctx) return;
-    
-    // We now handle the drawing rendering in the restore effect above
-    // This is just for redrawing strokes
-    
-    ctx.save();
-    ctx.scale(scale, scale);
-
-    // Use the strokes for the current page
-    const currentPageStrokes = strokesByPage[pageNumber] || [];
-    currentPageStrokes.forEach(stroke => {
-      if (stroke.points.length < 2) return;
-      
-      ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      
-      stroke.points.forEach((point, i) => {
-        if (i > 0) ctx.lineTo(point.x, point.y);
-      });
-      
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.lineWidth || lineWidth;
-      ctx.globalAlpha = stroke.opacity !== undefined ? stroke.opacity : 1.0;
-      ctx.stroke();
-    });
-
-    ctx.restore();
+    redrawStrokes(ctx, strokesByPage[pageNumber] || [], scale, lineWidth);
   }, [scale, ctx, width, height, redrawTrigger, pageNumber, strokesByPage, lineWidth]);
 
   // Handle zoom with scroll wheel
@@ -172,31 +171,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     };
   }, [isActive, scale, onScaleChange]);
 
-  // Handle undo with Ctrl+Z
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isActive) return;
-      
-      if (e.ctrlKey && e.key === 'z') {
-        e.preventDefault();
-        setStrokesByPage(prev => ({
-          ...prev,
-          [pageNumber]: (prev[pageNumber] || []).slice(0, -1)
-        }));
-        setRedrawTrigger(prev => prev + 1);
-      }
-    };
-
-    if (isActive) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isActive, pageNumber]);
-
-  // Register the canvas with parent component
+  // Register canvas with parent
   useEffect(() => {
     if (onRegisterCanvas) {
       onRegisterCanvas(canvasRef.current);
@@ -208,16 +183,12 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     };
   }, [onRegisterCanvas]);
 
-  // Function definitions
   const startDrawing = (e: React.MouseEvent) => {
-    if (!isActive || !ctx) return;
+    if (!isActive || !ctx || !canvasRef.current) return;
     
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-    
+    const position = getMousePosition(e, canvasRef.current, scale);
     currentStroke.current = {
-      points: [{ x, y }],
+      points: [position],
       color,
       lineWidth,
       opacity
@@ -227,103 +198,32 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   };
 
   const draw = (e: React.MouseEvent) => {
-    if (!isDrawing || !isActive || !ctx) return;
+    if (!isDrawing || !isActive || !ctx || !canvasRef.current) return;
     
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-    
-    currentStroke.current.points.push({ x, y });
-    
-    // Scale context for the current stroke
-    ctx.save();
-    ctx.scale(scale, scale);
-    
-    // Draw the current stroke
-    ctx.beginPath();
-    ctx.moveTo(currentStroke.current.points[currentStroke.current.points.length - 2].x, 
-               currentStroke.current.points[currentStroke.current.points.length - 2].y);
-    ctx.lineTo(x, y);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.globalAlpha = opacity;
-    ctx.stroke();
-    
-    // Restore context
-    ctx.restore();
+    const position = getMousePosition(e, canvasRef.current, scale);
+    currentStroke.current.points.push(position);
+    drawStroke(ctx, currentStroke.current, scale, lineWidth);
   };
 
-  // Function to register strokes for the current page
-  const registerStroke = () => {
-    if (currentStroke.current.points.length > 0) {
-      setStrokesByPage(prev => ({
-        ...prev,
-        [pageNumber]: [...(prev[pageNumber] || []), { ...currentStroke.current }]
-      }));
-    }
-  };
-
-  // Modified: Save drawings for a specific page
-  const saveDrawingAsPng = async (pageNum = pageNumber) => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL('image/png');
-      setLocalDrawings(prev => {
-        const newDrawings = [...prev];
-        // Ensure the array has enough elements
-        while (newDrawings.length < pageNum) {
-          newDrawings.push('');
-        }
-        newDrawings[pageNum - 1] = dataUrl; // Store the drawing for the current page
-        return newDrawings;
-      });
-    }
-  };
-
-  // Now add global mouse event handlers after function declarations
   useEffect(() => {
     if (!isActive || !ctx) return;
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDrawing) return;
-      
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!isDrawing || !canvasRef.current) return;
 
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / scale;
-      const y = (e.clientY - rect.top) / scale;
+      const position = getMousePosition(e, canvasRef.current, scale);
+      if (!isWithinCanvas(position, width, height)) return;
       
-      if (x < 0 || x > width || y < 0 || y > height) return; // Only draw within the canvas
-      
-      currentStroke.current.points.push({ x, y });
-      
-      // Scale context for the current stroke
-      ctx.save();
-      ctx.scale(scale, scale);
-      
-      // Draw the current stroke
-      ctx.beginPath();
-      ctx.moveTo(currentStroke.current.points[currentStroke.current.points.length - 2].x, 
-                 currentStroke.current.points[currentStroke.current.points.length - 2].y);
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
-      ctx.globalAlpha = opacity;
-      ctx.stroke();
-      
-      // Restore context
-      ctx.restore();
+      currentStroke.current.points.push(position);
+      drawStroke(ctx, currentStroke.current, scale, lineWidth);
     };
     
     const handleGlobalMouseUp = () => {
-      if (isDrawing) {
-        if (currentStroke.current.points.length > 1) {
-          registerStroke();
-          saveDrawingAsPng();
-        }
-        setIsDrawing(false);
+      if (isDrawing && currentStroke.current.points.length > 1) {
+        registerStroke();
+        saveDrawingAsPng(canvasRef.current, pageNumber, localDrawings, setLocalDrawings);
       }
+      setIsDrawing(false);
     };
     
     document.addEventListener('mousemove', handleGlobalMouseMove);
@@ -333,7 +233,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [isActive, isDrawing, ctx, scale, width, height, color, lineWidth, registerStroke, saveDrawingAsPng]);
+  }, [isActive, isDrawing, ctx, scale, width, height, color, lineWidth, registerStroke]);
 
   return (
     <div className="absolute top-0 left-0 z-40" 
@@ -346,12 +246,13 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
            height: '100%'
          }}>
       {isActive && (
-        <div className="absolute top-[-87px] left-0 right-0 flex justify-center">
-          <div className="flex flex-col items-center">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-[550px] select-none">
-              <p>Scroll to zoom in/out. Left Click to draw.</p>
+        
+        <div className="absolute top-[-83px] left-0 right-0 flex justify-center">
+          <div className="flex flex-col items-center w-full max-w-[1200px]">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-full select-none">
+              <p className="text-center">Scroll to zoom in/out. Left Click to draw.</p>
             </div>
-            <div className="flex gap-2 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-[550px] items-center">
+            <div className="flex gap-2 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-full items-center">
               <div className="flex items-center gap-1">
                 <label className="text-xs font-medium text-black whitespace-nowrap">Size:</label>
                 <input
@@ -381,8 +282,8 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
               
               <div className="border-l border-gray-300 h-6 mx-1"></div>
               
-              <div className="flex items-center gap-1 w-[80px]">
-                <label className="text-xs font-medium text-black whitespace-nowrap w-[30px]">Color:</label>
+              <div className="flex items-center gap-1">
+                <label className="text-xs font-medium text-black whitespace-nowrap">Color:</label>
                 <input
                   type="color"
                   value={color}
@@ -426,11 +327,10 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
         onMouseUp={() => {
           if (currentStroke.current.points.length > 1) {
             registerStroke();
-            saveDrawingAsPng();
+            saveDrawingAsPng(canvasRef.current, pageNumber, localDrawings, setLocalDrawings);
           }
           setIsDrawing(false);
         }}
-        // onMouseLeave={stopDrawing}
       />
     </div>
   );

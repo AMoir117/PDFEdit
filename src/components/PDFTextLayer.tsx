@@ -299,74 +299,66 @@ export default function PDFTextLayer({ width, height, scale, isActive, pageNumbe
   };
 
   return (
-    <>
-      {/* Text Box Tools Bar - Positioned above the PDF */}
+    <div className="absolute top-0 left-0 z-30" style={{ width: '100%', height: '100%' }}>
       {isActive && (
-        <div className="absolute top-[-106px] left-0 right-0 flex flex-col items-center">
-          {/* Instructions bar */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-[550px] select-none">
-            {selectedTextBox ? (
-              <p>Double-click to edit text boxes. Click on the green check mark to save your changes.</p>
-            ) : (
-              <p>Click the &quot;Add Text Box&quot; button to create a new text box. Double-click any existing text box to edit it.</p>
-            )}
-          </div>
-          
-          {/* Tools bar */}
-          <div className="flex items-center gap-2 bg-white p-2 rounded-b shadow-md z-20 border border-gray-300 text-black w-[550px] select-none">
-            <button
-              onClick={handleAddButtonClick}
-              className="bg-blue-500 text-white py-1 px-2 rounded text-sm hover:bg-blue-600 whitespace-nowrap"
-            >
-              + Add Text Box
-            </button>
-            
-            <div className="flex items-center gap-1">
-              <label className="text-xs font-medium text-black whitespace-nowrap">Color:</label>
-              <input
-                type="color"
-                value={textColor}
-                onChange={(e) => {
-                  setTextColor(e.target.value);
-                  if (selectedTextBox) {
-                    updateTextBox(selectedTextBox, { color: e.target.value });
-                  }
-                }}
-                className="w-6 h-6"
-              />
+        <div className="absolute top-[-87px] left-0 right-0 flex justify-center">
+          <div className="flex flex-col items-center w-full max-w-[1200px]">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-full select-none">
+              <p className="text-center">Click anywhere to add text. Double-click text to edit.</p>
             </div>
-            
-            <div className="flex items-center gap-1">
-              <label className="text-xs font-medium text-black whitespace-nowrap">Size:</label>
-              <input
-                type="number"
-                min="8"
-                max="72"
-                value={fontSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
-                  setFontSize(newSize);
-                  if (selectedTextBox) {
-                    updateTextBox(selectedTextBox, { fontSize: newSize });
-                  }
-                }}
-                className="w-12 p-1 border rounded"
-              />
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <label className="text-xs font-medium text-black whitespace-nowrap">Font:</label>
-              <select 
-                value={selectedFont}
-                onChange={handleFontChange}
-                className="p-1 border rounded text-sm w-28"
-              >
-                {FONT_OPTIONS.map(font => (
-                  <option key={font.value} value={font.value}>
-                    {font.name}
-                  </option>
-                ))}
-              </select>
+            <div className="flex gap-2 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-full items-center">
+              <div className="flex items-center gap-1">
+                <label className="text-xs font-medium text-black whitespace-nowrap">Size:</label>
+                <input
+                  type="range"
+                  min="8"
+                  max="72"
+                  value={fontSize}
+                  onChange={(e) => {
+                    const newSize = Number(e.target.value);
+                    setFontSize(newSize);
+                    if (selectedTextBox) {
+                      updateTextBox(selectedTextBox, { fontSize: newSize });
+                    }
+                  }}
+                  className="w-16"
+                />
+                <span className="text-xs font-medium text-black min-w-[18px] text-center">{fontSize}px</span>
+              </div>
+              
+              <div className="border-l border-gray-300 h-6 mx-1"></div>
+              
+              <div className="flex items-center gap-1">
+                <label className="text-xs font-medium text-black whitespace-nowrap">Color:</label>
+                <input
+                  type="color"
+                  value={textColor}
+                  onChange={(e) => {
+                    setTextColor(e.target.value);
+                    if (selectedTextBox) {
+                      updateTextBox(selectedTextBox, { color: e.target.value });
+                    }
+                  }}
+                  className="w-6 h-6"
+                />
+              </div>
+              
+              <div className="border-l border-gray-300 h-6 mx-1"></div>
+              
+              <div className="flex items-center gap-1">
+                <label className="text-xs font-medium text-black whitespace-nowrap">Font:</label>
+                <select 
+                  value={selectedFont}
+                  onChange={handleFontChange}
+                  className="p-1 border rounded text-sm w-28"
+                >
+                  {FONT_OPTIONS.map(font => (
+                    <option key={font.value} value={font.value}>
+                      {font.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -417,115 +409,60 @@ export default function PDFTextLayer({ width, height, scale, isActive, pageNumbe
               style={{ pointerEvents: 'none' }}
             />
             
-            <textarea
-              ref={el => { textAreaRefs.current[textBox.id] = el; }}
-              value={textBox.content}
-              onChange={(e) => handleTextChange(textBox.id, e)}
-              style={{
-                width: `${textBox.width}px`,
-                height: `${textBox.height}px`,
-                fontSize: `${textBox.fontSize}px`,
-                color: textBox.color,
-                fontFamily: textBox.fontFamily || FONT_OPTIONS[0].value,
-                backgroundColor: 'transparent', // Fully transparent background
-                resize: 'none', // We'll handle resize with our custom handle
-                border: selectedTextBox === textBox.id && editMode[textBox.id] && isActive ? '1px dashed #aaa' : 'none',
-                padding: '4px',
-                outline: 'none',
-                overflow: 'hidden',
-                cursor: 'text',
-                position: 'relative',
-                zIndex: editMode[textBox.id] ? 20 : 1, // Only higher than overlay when in edit mode
-                pointerEvents: isActive && editMode[textBox.id] ? 'auto' : 'none', // Only allow interaction in edit mode
-                userSelect: isActive && editMode[textBox.id] ? 'text' : 'none', // Only allow text selection in edit mode
-                WebkitUserSelect: isActive && editMode[textBox.id] ? 'text' : 'none',
-                MozUserSelect: isActive && editMode[textBox.id] ? 'text' : 'none',
-                msUserSelect: isActive && editMode[textBox.id] ? 'text' : 'none'
-              }}
-              readOnly={!isActive || !editMode[textBox.id]}
-              placeholder="Enter text here..."
-              onClick={(e) => {
-                if (isActive && editMode[textBox.id]) {
-                  e.stopPropagation();
-                  handleTextBoxClick(textBox.id, e);
-                }
-              }}
-            />
-            
-            {/* Only show these controls when in edit mode and selected */}
-            {selectedTextBox === textBox.id && editMode[textBox.id] && isActive && (
-              <>
-                {/* Both buttons next to each other */}
-                <div className="absolute -top-3 -right-3 flex z-30">
-                  {/* Confirm button - now next to Delete button */}
-                  <button
-                    className="mr-1 bg-green-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-green-600"
-                    onClick={(e) => handleConfirmTextBox(textBox.id, e)}
-                    title="Confirm text box"
-                  >
-                    ✓
-                  </button>
-                
-                  {/* Delete button */}
-                  <button
-                    className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-600"
-                    onClick={(e) => {
-                      if (isActive) {
-                        handleDeleteTextBox(textBox.id, e);
-                      }
-                    }}
-                    title="Delete text box"
-                  >
-                    ×
-                  </button>
-                </div>
-                
-                {/* Custom resize handle */}
-                <div 
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 cursor-se-resize z-30 hover:bg-blue-600"
-                  onMouseDown={(e) => handleResizeStart(textBox.id, e)}
-                  title="Resize text box"
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16" className="absolute top-2 left-2 fill-white">
-                    <path d="M22 22H17V20H20V17H22V22ZM9 20V22H14V20H9ZM2 20V17H4V20H7V22H2ZM20 9H22V14H20V9ZM20 2V7H22V2H17V4H7V2H2V7H4V14H2V17H4V14H7V17H9V14H14V17H17V14H20V9H17V7H14V4H17V2H20Z" />
-                  </svg>
-                </div>
-                
-                {/* Move handle */}
-                <div 
-                  className="absolute -top-3 left-0 right-0 h-3 bg-blue-500 cursor-move z-30 mx-auto w-16 rounded-t"
-                  onMouseDown={(e) => {
-                    if (isActive) {
-                      handleMouseDown(textBox.id, e);
-                    }
-                  }}
-                  title="Drag to move"
-                />
-              </>
-            )}
-            
-            {/* Edit indicator for non-edit mode boxes - full width overlay */}
-            {isActive && !editMode[textBox.id] && (
-              <div 
-                className="absolute inset-0 bg-transparent cursor-pointer z-10 hover:bg-blue-50 hover:bg-opacity-10 select-none"
-                title="Double-click to edit"
-                onClick={(e) => handleOverlayClick(textBox.id, e)}
-                onDoubleClick={(e) => handleOverlayDoubleClick(textBox.id, e)}
-                style={{ 
-                  pointerEvents: 'auto', 
-                  width: '100%', 
+            {/* The actual text content */}
+            {editMode[textBox.id] ? (
+              <textarea
+                ref={el => { textAreaRefs.current[textBox.id] = el; }}
+                value={textBox.content}
+                onChange={(e) => updateTextBox(textBox.id, { content: e.target.value })}
+                style={{
+                  width: '100%',
                   height: '100%',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  MozUserSelect: 'none',
-                  msUserSelect: 'none'
+                  fontFamily: textBox.fontFamily,
+                  fontSize: textBox.fontSize,
+                  color: textBox.color,
+                  resize: 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  padding: '0',
+                  margin: '0',
+                  overflow: 'hidden'
+                }}
+                onBlur={() => setEditMode(prev => ({ ...prev, [textBox.id]: false }))}
+                autoFocus
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  fontFamily: textBox.fontFamily,
+                  fontSize: textBox.fontSize,
+                  color: textBox.color,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  pointerEvents: 'none'
                 }}
               >
+                {textBox.content}
               </div>
             )}
-        </div>
-      ))}
+            
+            {/* Resize handle */}
+            {isActive && selectedTextBox === textBox.id && editMode[textBox.id] && (
+              <div
+                className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize bg-blue-500 rounded-bl"
+                style={{
+                  transform: 'translate(50%, 50%)',
+                  pointerEvents: 'auto'
+                }}
+                onMouseDown={(e) => handleResizeStart(textBox.id, e)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-    </>
   );
 }

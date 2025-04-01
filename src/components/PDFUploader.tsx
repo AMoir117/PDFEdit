@@ -73,7 +73,7 @@ export default function PDFUploader({ onFileUpload }: PDFUploaderProps) {
       </div>
       <footer className="mt-4 text-center text-gray-500 text-xs">
         <p>
-          Site made by <a href="https://www.linkedin.com/in/andrew-g-moir/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Andrew M</a>
+          Site made by <a href="https://www.linkedin.com/in/andrew-g-moir/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Andrew M</a> | <a href="https://github.com/AMoir117/PDFEdit" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">GitHub</a>
         </p>
       </footer>
     </div>

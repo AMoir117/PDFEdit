@@ -11,6 +11,7 @@ interface DynamicPDFViewerProps {
   file: PDFFile;
 }
 
+// This is for deployment versions
 export default function DynamicPDFViewer({ file }: DynamicPDFViewerProps) {
   useEffect(() => {
     // Only run in the browser

@@ -139,31 +139,7 @@ export default function PDFEditor({ file }: PDFEditorProps) {
           scale={scale}
           onScaleChange={handleScaleChange}
         />
-      ) : (
-        <div className="flex justify-center mt-6 mb-2 text-center">
-          <div className="flex flex-col items-center">
-            <div className="bg-white text-gray-700 text-sm py-2 px-6 rounded-t-lg shadow-md w-[550px] select-none border border-gray-100 border-b-0">
-              <p className="font-medium">Arrange and manage pages in your PDF document</p>
-            </div>
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-2.5 px-6 rounded-b-lg shadow-md w-[550px] select-none">
-              <div className="flex items-center gap-6 justify-center">
-                <div className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                  </svg>
-                  <span>Drag to rearrange</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  <span>Click to delete</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       <div className="flex-1 w-full overflow-auto">
         <div 
