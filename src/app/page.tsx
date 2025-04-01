@@ -1,24 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { pdfjs } from 'react-pdf';
+import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import PDFUploader from '@/components/PDFUploader';
-import PDFEditor from '@/components/PDFEditor';
 import type { PDFFile } from '@/types/pdf';
-import 'react-pdf/dist/Page/TextLayer.css';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
 
-
-// Let's try explicitly setting the worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
-
-// Debug version info
-console.log('PDF.js version:', pdfjs.version);
-console.log('Current worker src:', pdfjs.GlobalWorkerOptions.workerSrc);
+// Dynamically import the PDF viewer with SSR disabled
+const DynamicPDFViewer = dynamic(() => import('@/components/DynamicPDFViewer'), {
+  ssr: false,
+  loading: () => <p className="text-center p-8">Loading PDF editor...</p>
+});
 
 export default function Home() {
   const [pdfFile, setPdfFile] = useState<PDFFile | null>(null);
@@ -36,7 +28,7 @@ export default function Home() {
             <PDFUploader onFileUpload={handleFileUpload} />
           </div>
         ) : (
-          <PDFEditor file={pdfFile} />
+          <DynamicPDFViewer file={pdfFile} />
         )}
       </div>
     </div>
