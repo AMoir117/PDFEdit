@@ -27,10 +27,8 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
-  const [opacity, setOpacity] = useState(1.0);
   const [strokesByPage, setStrokesByPage] = useState<Record<number, DrawingStroke[]>>({});
   const currentStroke = useRef<DrawingStroke>({ points: [], color: '', lineWidth: 0, opacity: 1.0 });
-  const [redrawTrigger, setRedrawTrigger] = useState(0);
   const prevPageNumberRef = useRef<number>(pageNumber);
   const [localDrawings, setLocalDrawings] = useState<string[]>(initialDrawings);
 
@@ -146,7 +144,7 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
   useEffect(() => {
     if (!ctx) return;
     redrawStrokes(ctx, strokesByPage[pageNumber] || [], scale, lineWidth);
-  }, [scale, ctx, width, height, redrawTrigger, pageNumber, strokesByPage, lineWidth]);
+  }, [scale, ctx, width, height, pageNumber, strokesByPage, lineWidth]);
 
   // Handle zoom with scroll wheel
   useEffect(() => {
@@ -191,7 +189,6 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
       points: [position],
       color,
       lineWidth,
-      opacity
     };
     
     setIsDrawing(true);
@@ -235,6 +232,24 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
     };
   }, [isActive, isDrawing, ctx, scale, width, height, color, lineWidth, registerStroke]);
 
+  useEffect(() => {
+    const handleSizeChange = (e: CustomEvent) => {
+      setLineWidth(e.detail);
+    };
+
+    const handleColorChange = (e: CustomEvent) => {
+      setColor(e.detail);
+    };
+
+    window.addEventListener('drawing-size-change', handleSizeChange as EventListener);
+    window.addEventListener('drawing-color-change', handleColorChange as EventListener);
+
+    return () => {
+      window.removeEventListener('drawing-size-change', handleSizeChange as EventListener);
+      window.removeEventListener('drawing-color-change', handleColorChange as EventListener);
+    };
+  }, []);
+
   return (
     <div className="absolute top-0 left-0 z-40" 
          style={{ 
@@ -245,72 +260,6 @@ export default function PDFDrawingLayer({ width, height, scale, isActive, onScal
            width: '100%',
            height: '100%'
          }}>
-      {isActive && (
-        
-        <div className="absolute top-[-83px] left-0 right-0 flex justify-center">
-          <div className="flex flex-col items-center w-full max-w-[1200px]">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-full select-none">
-              <p className="text-center">Scroll to zoom in/out. Left Click to draw.</p>
-            </div>
-            <div className="flex gap-2 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-full items-center">
-              <div className="flex items-center gap-1">
-                <label className="text-xs font-medium text-black whitespace-nowrap">Size:</label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={lineWidth}
-                  onChange={(e) => setLineWidth(Number(e.target.value))}
-                  className="w-16"
-                />
-                <span className="text-xs font-medium text-black min-w-[18px] text-center">{lineWidth}</span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <label className="text-xs font-medium text-black whitespace-nowrap">Opacity:</label>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={opacity}
-                  onChange={(e) => setOpacity(Number(e.target.value))}
-                  className="w-16"
-                />
-                <span className="text-xs font-medium text-black min-w-[30px] text-center">{Math.round(opacity * 100)}%</span>
-              </div>
-              
-              <div className="border-l border-gray-300 h-6 mx-1"></div>
-              
-              <div className="flex items-center gap-1">
-                <label className="text-xs font-medium text-black whitespace-nowrap">Color:</label>
-                <input
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="w-6 h-6"
-                />
-              </div>
-              
-              <div className="flex-1"></div>
-              
-              <div className="flex items-center gap-1">
-                {[
-                  '#000000', '#FF0000', '#00FF00', '#FFFF00',
-                ].map((clr) => (
-                  <button
-                    key={clr}
-                    onClick={() => setColor(clr)}
-                    className={`w-5 h-5 rounded-full border ${color === clr ? 'ring-1 ring-offset-1 ring-blue-500' : 'border-gray-300 shadow-sm'}`}
-                    style={{ backgroundColor: clr }}
-                    title={`Set color to ${clr}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       <canvas
         ref={canvasRef}
         className={`${isActive ? 'cursor-crosshair' : 'pointer-events-none'}`}

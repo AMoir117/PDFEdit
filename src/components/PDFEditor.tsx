@@ -132,14 +132,142 @@ export default function PDFEditor({ file }: PDFEditorProps) {
       </div>
       
       {mode !== 'arrange' ? (
-        <PDFControls 
-          pageNumber={pageNumber}
-          numPages={numPages}
-          onPageChange={setPageNumber}
-          scale={scale}
-          onScaleChange={handleScaleChange}
-        />
-      ) : null}
+        <>
+          <PDFControls 
+            pageNumber={pageNumber}
+            numPages={numPages}
+            onPageChange={setPageNumber}
+            scale={scale}
+            onScaleChange={handleScaleChange}
+          />
+          
+          {mode === 'draw' && (
+            <div className="flex justify-center mt-8 mb-2">
+              <div className="flex flex-col items-center max-w-3x1">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-full select-none">
+                  <p className="text-center">Scroll to zoom in/out. Left Click to draw.</p>
+                </div>
+                <div className="flex gap-6 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-full items-center justify-center">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600">Size:</label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      defaultValue="2"
+                      className="w-16"
+                      onChange={(e) => {
+                        // We'll handle this in the drawing layer through props
+                        window.dispatchEvent(new CustomEvent('drawing-size-change', { 
+                          detail: Number(e.target.value) 
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600">Color:</label>
+                    <input
+                      type="color"
+                      defaultValue="#000000"
+                      className="w-6 h-6"
+                      onChange={(e) => {
+                        window.dispatchEvent(new CustomEvent('drawing-color-change', { 
+                          detail: e.target.value 
+                        }));
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mode === 'text' && (
+            <div className="flex justify-center mt-8 mb-2">
+              <div className="flex flex-col items-center max-w-3x1">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-full select-none">
+                  <p className="text-center">Double-click any existing text box to edit it.</p>
+                </div>
+                <div className="flex gap-6 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-full items-center justify-center">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('add-text-box'));
+                    }}
+                    className="bg-blue-500 text-white py-1 px-2 rounded text-sm hover:bg-blue-600 whitespace-nowrap"
+                  >
+                    + Add Text Box
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600">Font:</label>
+                    <select
+                      className="text-xs px-1 py-0.5 border rounded"
+                      onChange={(e) => {
+                        window.dispatchEvent(new CustomEvent('text-font-change', { 
+                          detail: e.target.value 
+                        }));
+                      }}
+                    >
+                      <option value="Arial, sans-serif">Arial</option>
+                      <option value="Times New Roman, serif">Times New Roman</option>
+                      <option value="Courier New, monospace">Courier New</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600">Size:</label>
+                    <input
+                      type="number"
+                      min="8"
+                      max="72"
+                      defaultValue="16"
+                      className="w-16 px-1 py-0.5 border rounded"
+                      onChange={(e) => {
+                        window.dispatchEvent(new CustomEvent('text-size-change', { 
+                          detail: Number(e.target.value) 
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600">Color:</label>
+                    <input
+                      type="color"
+                      defaultValue="#000000"
+                      className="w-6 h-6"
+                      onChange={(e) => {
+                        window.dispatchEvent(new CustomEvent('text-color-change', { 
+                          detail: e.target.value 
+                        }));
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex justify-center mt-8 mb-2">
+          <div className="flex flex-col items-center max-w-3x1">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm py-1 px-4 rounded-t shadow-md w-full select-none">
+              <p className="text-center">Arrange and manage pages in your PDF document</p>
+            </div>
+            <div className="flex gap-6 bg-white p-2 rounded-b shadow z-50 border border-gray-300 w-full items-center justify-center">
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <span className="text-sm text-gray-600">Drag to rearrange</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="text-sm text-gray-600">Click to delete</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 w-full overflow-auto">
         <div 
@@ -160,7 +288,7 @@ export default function PDFEditor({ file }: PDFEditorProps) {
               file={pdfUrl}
               onLoadSuccess={onDocumentLoadSuccess}
             >
-              <div className="relative bg-white shadow-lg" style={{ marginTop: mode === 'text' ? '80px' : mode === 'draw' ? '70px' : '0' }}>
+              <div className="relative bg-white shadow-lg">
                 <div id={`page-${pageNumber}`} className="relative">
                   <Page 
                     pageNumber={pageNumber} 
