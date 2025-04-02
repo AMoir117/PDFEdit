@@ -14,9 +14,10 @@ import PDFPageArranger from './PDFPageArranger';
 
 interface PDFEditorProps {
   file: PDFFile;
+  setPdfFile: (file: PDFFile | null) => void;
 }
 
-export default function PDFEditor({ file }: PDFEditorProps) {
+export default function PDFEditor({ file, setPdfFile }: PDFEditorProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1);
@@ -116,6 +117,7 @@ export default function PDFEditor({ file }: PDFEditorProps) {
           <PDFToolbar 
             mode={mode}
             onModeChange={setMode}
+            setPdfFile={setPdfFile}
           >
             <PDFDownloader
               drawingLayerRef={drawingLayerRef}

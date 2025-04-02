@@ -67,9 +67,11 @@ export default function PDFUploader({ onFileUpload }: PDFUploaderProps) {
         ) : isDragActive ? (
           <p>Drop the PDF files here...</p>
         ) : (
-          <p>Drag and drop PDF files here, or click to select them</p>
+          <p>Drag and drop PDF files here, or click to open file browser.</p>
         )}
-        <p className="mt-4 text-gray-600 text-sm">Merge, Draw/Sign, Re-Arrange & Delete PDF Pages</p>
+        <p className="mt-4 text-gray-600 text-sm">Select Multiple PDFs to Merge</p>
+        <p className="mt-4 text-gray-600 text-sm">Draw/Sign, Re-Arrange & Delete PDF Pages</p>
+      
       </div>
       <footer className="mt-4 text-center text-gray-500 text-xs">
         <p>

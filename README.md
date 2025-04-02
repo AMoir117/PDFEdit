@@ -1,9 +1,14 @@
 # PDF-Edit
 
+* Merge PDFs
+* Draw/Sign
+* Re Arrange Pages
+* Add Text
+
 # How to run
-clone the repo
-npm install
-npm run dev
+* clone the repo
+* npm install
+* npm run dev
 
 # Key
 [X] - Done
@@ -15,7 +20,9 @@ npm run dev
 - Edit:
   - Add edit text functionality. [... ]
 
+# Deployment
 
+* https://pdf-edit-dd51be8bbba2.herokuapp.com/
 
 # GIFs
 

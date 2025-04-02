@@ -9,10 +9,11 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 
 interface DynamicPDFViewerProps {
   file: PDFFile;
+  setPdfFile: (file: PDFFile | null) => void;
 }
 
 // This is for deployment versions
-export default function DynamicPDFViewer({ file }: DynamicPDFViewerProps) {
+export default function DynamicPDFViewer({ file, setPdfFile }: DynamicPDFViewerProps) {
   useEffect(() => {
     // Only run in the browser
     if (typeof window !== 'undefined') {
@@ -25,5 +26,5 @@ export default function DynamicPDFViewer({ file }: DynamicPDFViewerProps) {
     }
   }, []);
 
-  return <PDFEditor file={file} />;
+  return <PDFEditor file={file} setPdfFile={setPdfFile} />;
 } 

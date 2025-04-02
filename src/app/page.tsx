@@ -28,7 +28,7 @@ export default function Home() {
             <PDFUploader onFileUpload={handleFileUpload} />
           </div>
         ) : (
-          <DynamicPDFViewer file={pdfFile} />
+          <DynamicPDFViewer file={pdfFile} setPdfFile={setPdfFile} />
         )}
       </div>
     </div>
